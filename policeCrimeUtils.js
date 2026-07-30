@@ -267,6 +267,12 @@ class PoliceCrimeUtils {
 }
 
 // Global Export or Module Export compatibility
+if (typeof window !== 'undefined') {
+  window.PoliceCrimeUtils = PoliceCrimeUtils;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.PoliceCrimeUtils = PoliceCrimeUtils;
+}
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = PoliceCrimeUtils;
 }

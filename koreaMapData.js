@@ -153,29 +153,35 @@ function getAggregatedRegionStats(metricMode = mapMetricMode) {
     };
   });
 
-  if (typeof PROCESSED_POLICE_DATASET !== 'undefined') {
-    PROCESSED_POLICE_DATASET.forEach(st => {
-      const reg = st.agencyRegion;
-      if (regionStats[reg]) {
-        regionStats[reg].totalPopulation += st.population;
-        regionStats[reg].totalOccurrences += st.occurrences;
-        regionStats[reg].totalArrests += st.arrests;
+  const dataset = (typeof window !== 'undefined' && window.PROCESSED_POLICE_DATASET)
+    ? window.PROCESSED_POLICE_DATASET
+    : (typeof PROCESSED_POLICE_DATASET !== 'undefined' ? PROCESSED_POLICE_DATASET : []);
 
-        regionStats[reg].breakdown.murder += st.breakdown.murder;
-        regionStats[reg].breakdown.robbery += st.breakdown.robbery;
-        regionStats[reg].breakdown.sexualAssault += st.breakdown.sexualAssault;
-        regionStats[reg].breakdown.theft += st.breakdown.theft;
-        regionStats[reg].breakdown.violence += st.breakdown.violence;
+  dataset.forEach(st => {
+    const reg = st.agencyRegion;
+    if (regionStats[reg]) {
+      regionStats[reg].totalPopulation += st.population;
+      regionStats[reg].totalOccurrences += st.occurrences;
+      regionStats[reg].totalArrests += st.arrests;
 
-        regionStats[reg].stations.push(st);
-      }
-    });
-  }
+      regionStats[reg].breakdown.murder += st.breakdown.murder;
+      regionStats[reg].breakdown.robbery += st.breakdown.robbery;
+      regionStats[reg].breakdown.sexualAssault += st.breakdown.sexualAssault;
+      regionStats[reg].breakdown.theft += st.breakdown.theft;
+      regionStats[reg].breakdown.violence += st.breakdown.violence;
+
+      regionStats[reg].stations.push(st);
+    }
+  });
+
+  const Utils = (typeof window !== 'undefined' && window.PoliceCrimeUtils)
+    ? window.PoliceCrimeUtils
+    : (typeof PoliceCrimeUtils !== 'undefined' ? PoliceCrimeUtils : null);
 
   const regionList = Object.keys(regionStats).map(reg => {
     const data = regionStats[reg];
-    const ratePer100k = PoliceCrimeUtils.calculateCrimeRate100k(data.totalOccurrences, data.totalPopulation);
-    const arrestRate = PoliceCrimeUtils.calculateArrestRate(data.totalOccurrences, data.totalArrests);
+    const ratePer100k = Utils ? Utils.calculateCrimeRate100k(data.totalOccurrences, data.totalPopulation) : 0;
+    const arrestRate = Utils ? Utils.calculateArrestRate(data.totalOccurrences, data.totalArrests) : 0;
     data.ratePer100k = ratePer100k;
     data.arrestRate = arrestRate;
     data.stations.sort((a, b) => b.ratePer100k - a.ratePer100k);

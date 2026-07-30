@@ -438,11 +438,15 @@ const SCALED_POLICE_DATASET = POLICE_STATION_DATASET.map(st => {
 });
 
 // 데이터 초기화 시 각 경찰서별 발생률, 검거율, 위험도 지수 자동 계산
-const PROCESSED_POLICE_DATASET = SCALED_POLICE_DATASET.map(st => {
-  const ratePer100k = PoliceCrimeUtils.calculateCrimeRate100k(st.occurrences, st.population);
-  const arrestRate = PoliceCrimeUtils.calculateArrestRate(st.occurrences, st.arrests);
-  const riskIndex = PoliceCrimeUtils.calculateRiskIndex(st.breakdown, st.population);
-  const riskGrade = PoliceCrimeUtils.getRiskGrade(riskIndex);
+var PROCESSED_POLICE_DATASET = SCALED_POLICE_DATASET.map(st => {
+  var Utils = (typeof window !== 'undefined' && window.PoliceCrimeUtils) 
+    ? window.PoliceCrimeUtils 
+    : (typeof PoliceCrimeUtils !== 'undefined' ? PoliceCrimeUtils : null);
+
+  const ratePer100k = Utils ? Utils.calculateCrimeRate100k(st.occurrences, st.population) : 0;
+  const arrestRate = Utils ? Utils.calculateArrestRate(st.occurrences, st.arrests) : 0;
+  const riskIndex = Utils ? Utils.calculateRiskIndex(st.breakdown, st.population) : 0;
+  const riskGrade = Utils ? Utils.getRiskGrade(riskIndex) : { grade: 1, label: '안전', color: '#10b981', badgeClass: 'badge-safe' };
 
   return {
     ...st,
@@ -452,6 +456,15 @@ const PROCESSED_POLICE_DATASET = SCALED_POLICE_DATASET.map(st => {
     riskGrade
   };
 });
+
+if (typeof window !== 'undefined') {
+  window.POLICE_STATION_DATASET = POLICE_STATION_DATASET;
+  window.PROCESSED_POLICE_DATASET = PROCESSED_POLICE_DATASET;
+}
+if (typeof globalThis !== 'undefined') {
+  globalThis.POLICE_STATION_DATASET = POLICE_STATION_DATASET;
+  globalThis.PROCESSED_POLICE_DATASET = PROCESSED_POLICE_DATASET;
+}
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { POLICE_STATION_DATASET, PROCESSED_POLICE_DATASET };

@@ -51,20 +51,54 @@ function switchMapMetric(mode) {
   selectRegionOnMap(selectedRegionKey);
 }
 
+// 안전한 데이터셋 및 유틸리티 객체 게터 (글로벌 바인딩 보장)
+function getDataset() {
+  if (typeof window !== 'undefined' && window.PROCESSED_POLICE_DATASET) {
+    return window.PROCESSED_POLICE_DATASET;
+  }
+  if (typeof PROCESSED_POLICE_DATASET !== 'undefined') {
+    return PROCESSED_POLICE_DATASET;
+  }
+  return [];
+}
+
+function getUtils() {
+  if (typeof window !== 'undefined' && window.PoliceCrimeUtils) {
+    return window.PoliceCrimeUtils;
+  }
+  if (typeof PoliceCrimeUtils !== 'undefined') {
+    return PoliceCrimeUtils;
+  }
+  return null;
+}
+
 // 1. KPI 통계 카드 초기화
 function initSummaryKPI() {
-  const summary = PoliceCrimeUtils.getCrimeSummary(PROCESSED_POLICE_DATASET);
+  const Utils = getUtils();
+  const dataset = getDataset();
+  if (!Utils || !dataset.length) return;
 
-  document.getElementById('kpi-total-stations').textContent = `${summary.totalStations}개`;
-  document.getElementById('kpi-total-pop').textContent = summary.totalPopulation.toLocaleString();
-  document.getElementById('kpi-avg-rate').textContent = `${summary.avgRatePer100k} 건/10만명`;
-  document.getElementById('kpi-total-occurrences').textContent = summary.totalOccurrences.toLocaleString();
-  document.getElementById('kpi-avg-arrest').textContent = `${summary.avgArrestRate}%`;
-  document.getElementById('kpi-total-arrests').textContent = summary.totalArrests.toLocaleString();
+  const summary = Utils.getCrimeSummary(dataset);
+
+  const elemStations = document.getElementById('kpi-total-stations');
+  const elemPop = document.getElementById('kpi-total-pop');
+  const elemRate = document.getElementById('kpi-avg-rate');
+  const elemOccur = document.getElementById('kpi-total-occurrences');
+  const elemArrest = document.getElementById('kpi-avg-arrest');
+  const elemArrestCount = document.getElementById('kpi-total-arrests');
+  const elemHighStation = document.getElementById('kpi-highest-station');
+  const elemHighRate = document.getElementById('kpi-highest-rate');
+
+  if (elemStations) elemStations.textContent = `${summary.totalStations}개`;
+  if (elemPop) elemPop.textContent = summary.totalPopulation.toLocaleString();
+  if (elemRate) elemRate.textContent = `${summary.avgRatePer100k} 건/10만명`;
+  if (elemOccur) elemOccur.textContent = summary.totalOccurrences.toLocaleString();
+  if (elemArrest) elemArrest.textContent = `${summary.avgArrestRate}%`;
+  if (elemArrestCount) elemArrestCount.textContent = summary.totalArrests.toLocaleString();
 
   if (summary.highestStation) {
-    document.getElementById('kpi-highest-station').textContent = summary.highestStation.stationName;
-    document.getElementById('kpi-highest-rate').textContent = summary.highestStation.ratePer100k.toLocaleString();
+    if (elemHighStation) elemHighStation.textContent = summary.highestStation.stationName;
+    if (elemHighRate) elemHighRate.textContent = summary.highestStation.ratePer100k.toLocaleString();
   }
 }
 
@@ -225,39 +259,22 @@ function selectRegionOnMap(key) {
 
 // 5. 시뮬레이터로 경찰서 선택 동기화
 function selectStationByPresetIndex(index) {
-  if (index < 0 || index >= PROCESSED_POLICE_DATASET.length) return;
-  document.getElementById('station-preset-select').value = index;
+  const dataset = getDataset();
+  if (index < 0 || index >= dataset.length) return;
+  const select = document.getElementById('station-preset-select');
+  if (select) select.value = index;
   loadStationPreset(index);
   scrollToElement('playground-section');
-}
-
-// 6. 지도 클릭 연동 자바스크립트 소스코드 복사
-function copyMapClickJsCode() {
-  const mapJsCode = `// 대한민국 17개 시/도 SVG 지도 클릭 이벤트 자바스크립트 연동
-document.querySelectorAll('.map-region-group').forEach(regionGroup => {
-  regionGroup.addEventListener('click', (event) => {
-    const groupId = regionGroup.getAttribute('id');
-    const regionKey = groupId.replace('map-group-', '');
-    const stats = aggregatedRegionStats[regionKey];
-
-    if (stats) {
-      console.log(\`[\${stats.name}] 10만명당 강력범죄 발생률: \${stats.ratePer100k}건, 총 발생: \${stats.totalOccurrences}건, 검거율: \${stats.arrestRate}%\`);
-      alert(\`[\${stats.name}]\n- 10만명당 발생률: \${stats.ratePer100k}건\n- 총 발생건수: \${stats.totalOccurrences.toLocaleString()}건\n- 치안 등급: \${stats.riskGrade.label}\`);
-    }
-  });
-});`;
-
-  navigator.clipboard.writeText(mapJsCode).then(() => {
-    showToast('지도 클릭 연동 자바스크립트 코드가 복사되었습니다!');
-  });
 }
 
 // 7. 플레이그라운드 프리셋 목록 구성
 function populatePresets() {
   const select = document.getElementById('station-preset-select');
+  if (!select) return;
   select.innerHTML = '';
 
-  PROCESSED_POLICE_DATASET.forEach((st, idx) => {
+  const dataset = getDataset();
+  dataset.forEach((st, idx) => {
     const option = document.createElement('option');
     option.value = idx;
     option.textContent = `[${st.agencyRegion}] ${st.stationName} (인구: ${st.population.toLocaleString()}명, 발생: ${st.occurrences.toLocaleString()}건)`;
@@ -268,45 +285,74 @@ function populatePresets() {
 // 8. 선택 경찰서의 공식 통계 데이터 로드
 function loadStationPreset(index) {
   if (index === '' || index === undefined) return;
-  const st = PROCESSED_POLICE_DATASET[index];
+  const dataset = getDataset();
+  const st = dataset[index];
   if (!st) return;
 
-  document.getElementById('input-population').value = st.population;
-  document.getElementById('input-occurrences').value = st.occurrences;
-  document.getElementById('input-arrests').value = st.arrests;
+  const elemPop = document.getElementById('input-population');
+  const elemOccur = document.getElementById('input-occurrences');
+  const elemArrst = document.getElementById('input-arrests');
 
-  document.getElementById('input-murder').value = st.breakdown.murder;
-  document.getElementById('input-robbery').value = st.breakdown.robbery;
-  document.getElementById('input-sex').value = st.breakdown.sexualAssault;
-  document.getElementById('input-theft').value = st.breakdown.theft;
-  document.getElementById('input-violence').value = st.breakdown.violence;
+  const elemM = document.getElementById('input-murder');
+  const elemR = document.getElementById('input-robbery');
+  const elemS = document.getElementById('input-sex');
+  const elemT = document.getElementById('input-theft');
+  const elemV = document.getElementById('input-violence');
+
+  if (elemPop) elemPop.value = st.population;
+  if (elemOccur) elemOccur.value = st.occurrences;
+  if (elemArrst) elemArrst.value = st.arrests;
+
+  if (elemM) elemM.value = st.breakdown.murder;
+  if (elemR) elemR.value = st.breakdown.robbery;
+  if (elemS) elemS.value = st.breakdown.sexualAssault;
+  if (elemT) elemT.value = st.breakdown.theft;
+  if (elemV) elemV.value = st.breakdown.violence;
 
   runLiveCalculation();
 }
 
 // 9. 공식 수치 기반 수식 계산 결과 표출
 function runLiveCalculation() {
-  const population = Number(document.getElementById('input-population').value) || 0;
-  const occurrences = Number(document.getElementById('input-occurrences').value) || 0;
-  const arrests = Number(document.getElementById('input-arrests').value) || 0;
+  const elemPop = document.getElementById('input-population');
+  const elemOccur = document.getElementById('input-occurrences');
+  const elemArrst = document.getElementById('input-arrests');
+
+  const population = Number(elemPop ? elemPop.value : 0) || 0;
+  const occurrences = Number(elemOccur ? elemOccur.value : 0) || 0;
+  const arrests = Number(elemArrst ? elemArrst.value : 0) || 0;
+
+  const elemM = document.getElementById('input-murder');
+  const elemR = document.getElementById('input-robbery');
+  const elemS = document.getElementById('input-sex');
+  const elemT = document.getElementById('input-theft');
+  const elemV = document.getElementById('input-violence');
 
   const breakdown = {
-    murder: Number(document.getElementById('input-murder').value) || 0,
-    robbery: Number(document.getElementById('input-robbery').value) || 0,
-    sexualAssault: Number(document.getElementById('input-sex').value) || 0,
-    theft: Number(document.getElementById('input-theft').value) || 0,
-    violence: Number(document.getElementById('input-violence').value) || 0
+    murder: Number(elemM ? elemM.value : 0) || 0,
+    robbery: Number(elemR ? elemR.value : 0) || 0,
+    sexualAssault: Number(elemS ? elemS.value : 0) || 0,
+    theft: Number(elemT ? elemT.value : 0) || 0,
+    violence: Number(elemV ? elemV.value : 0) || 0
   };
 
-  const rate100k = PoliceCrimeUtils.calculateCrimeRate100k(occurrences, population);
-  const arrestRate = PoliceCrimeUtils.calculateArrestRate(occurrences, arrests);
-  const riskIndex = PoliceCrimeUtils.calculateRiskIndex(breakdown, population);
-  const riskGrade = PoliceCrimeUtils.getRiskGrade(riskIndex);
+  const Utils = getUtils();
+  if (!Utils) return;
 
-  document.getElementById('res-rate-100k').textContent = `${rate100k} 건/10만명`;
-  document.getElementById('res-arrest-rate').textContent = `${arrestRate}%`;
-  document.getElementById('res-risk-index').textContent = `${riskIndex} 점`;
-  document.getElementById('res-risk-grade-badge').innerHTML = `<span class="badge ${riskGrade.badgeClass}">${riskGrade.label} (${riskGrade.grade}등급)</span>`;
+  const rate100k = Utils.calculateCrimeRate100k(occurrences, population);
+  const arrestRate = Utils.calculateArrestRate(occurrences, arrests);
+  const riskIndex = Utils.calculateRiskIndex(breakdown, population);
+  const riskGrade = Utils.getRiskGrade(riskIndex);
+
+  const resRate = document.getElementById('res-rate-100k');
+  const resArrest = document.getElementById('res-arrest-rate');
+  const resRisk = document.getElementById('res-risk-index');
+  const resBadge = document.getElementById('res-risk-grade-badge');
+
+  if (resRate) resRate.textContent = `${rate100k} 건/10만명`;
+  if (resArrest) resArrest.textContent = `${arrestRate}%`;
+  if (resRisk) resRisk.textContent = `${riskIndex} 점`;
+  if (resBadge) resBadge.innerHTML = `<span class="badge ${riskGrade.badgeClass}">${riskGrade.label} (${riskGrade.grade}등급)</span>`;
 
   const liveCode = `// 1. 관할 인구 10만 명당 강력범죄 발생률 계산 수식
 function calculateCrimeRate100k(totalCrimes, population) {
@@ -451,15 +497,26 @@ function filterAndSortPoliceStations(stationList = [], region = '전체', keywor
 
 // 11. 필터링 & 정렬 & 테이블 / 차트 업데이트
 function handleFilterChange() {
-  const searchKeyword = document.getElementById('search-input').value;
-  const region = document.getElementById('region-select').value;
-  const sortBy = document.getElementById('sort-select').value;
+  const searchInput = document.getElementById('search-input');
+  const regionSelect = document.getElementById('region-select');
+  const sortSelect = document.getElementById('sort-select');
 
-  currentFilteredStations = PoliceCrimeUtils.filterAndSortStations(PROCESSED_POLICE_DATASET, {
-    region,
-    searchKeyword,
-    sortBy
-  });
+  const searchKeyword = searchInput ? searchInput.value : '';
+  const region = regionSelect ? regionSelect.value : '전체';
+  const sortBy = sortSelect ? sortSelect.value : 'rateDesc';
+
+  const Utils = getUtils();
+  const dataset = getDataset();
+
+  if (Utils && dataset.length) {
+    currentFilteredStations = Utils.filterAndSortStations(dataset, {
+      region,
+      searchKeyword,
+      sortBy
+    });
+  } else {
+    currentFilteredStations = dataset;
+  }
 
   renderTable(currentFilteredStations);
   renderCharts();
@@ -467,15 +524,20 @@ function handleFilterChange() {
 
 function renderTable(stationList) {
   const tbody = document.getElementById('police-table-body');
-  document.getElementById('table-count-info').textContent = `총 ${stationList.length}개 경찰서 표시 중`;
+  const countInfo = document.getElementById('table-count-info');
+  if (countInfo) countInfo.textContent = `총 ${stationList.length}개 경찰서 표시 중`;
+
+  if (!tbody) return;
 
   if (!stationList.length) {
     tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 30px; color: var(--text-muted);">검색 조건에 해당하는 경찰서 데이터가 없습니다.</td></tr>`;
     return;
   }
 
+  const dataset = getDataset();
+
   tbody.innerHTML = stationList.map(st => {
-    const stIdx = PROCESSED_POLICE_DATASET.findIndex(s => s.stationName === st.stationName);
+    const stIdx = dataset.findIndex(s => s.stationName === st.stationName);
     return `
       <tr onclick="selectStationByPresetIndex(${stIdx})">
         <td><span class="badge" style="background: rgba(255,255,255,0.06); color:#cbd5e1;">${st.agencyRegion}</span></td>
@@ -493,58 +555,80 @@ function renderTable(stationList) {
 }
 
 function renderCharts() {
-  const sortedByRate = [...PROCESSED_POLICE_DATASET].sort((a, b) => b.ratePer100k - a.ratePer100k).slice(0, 10);
+  const dataset = getDataset();
+  if (!dataset.length) return;
+
+  const sortedByRate = [...dataset].sort((a, b) => b.ratePer100k - a.ratePer100k).slice(0, 10);
   const maxRate = sortedByRate[0]?.ratePer100k || 1;
 
   const rateChartContainer = document.getElementById('chart-high-rate');
-  rateChartContainer.innerHTML = sortedByRate.map(st => {
-    const widthPct = Math.min(100, Math.max(10, (st.ratePer100k / maxRate) * 100));
-    return `
-      <div class="bar-row">
-        <div class="bar-label" title="${st.stationName}">${st.stationName}</div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width: ${widthPct}%;"></div>
+  if (rateChartContainer) {
+    rateChartContainer.innerHTML = sortedByRate.map(st => {
+      const widthPct = Math.min(100, Math.max(10, (st.ratePer100k / maxRate) * 100));
+      return `
+        <div class="bar-row">
+          <div class="bar-label" title="${st.stationName}">${st.stationName}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: ${widthPct}%;"></div>
+          </div>
+          <div class="bar-value">${st.ratePer100k}</div>
         </div>
-        <div class="bar-value">${st.ratePer100k}</div>
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+  }
 
-  const sortedByArrest = [...PROCESSED_POLICE_DATASET].sort((a, b) => b.arrestRate - a.arrestRate).slice(0, 10);
+  const sortedByArrest = [...dataset].sort((a, b) => b.arrestRate - a.arrestRate).slice(0, 10);
   const arrestChartContainer = document.getElementById('chart-high-arrest');
-  arrestChartContainer.innerHTML = sortedByArrest.map(st => {
-    return `
-      <div class="bar-row">
-        <div class="bar-label" title="${st.stationName}">${st.stationName}</div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width: ${st.arrestRate}%; background: linear-gradient(90deg, #10b981, #06b6d4);"></div>
+  if (arrestChartContainer) {
+    arrestChartContainer.innerHTML = sortedByArrest.map(st => {
+      return `
+        <div class="bar-row">
+          <div class="bar-label" title="${st.stationName}">${st.stationName}</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: ${st.arrestRate}%; background: linear-gradient(90deg, #10b981, #06b6d4);"></div>
+          </div>
+          <div class="bar-value">${st.arrestRate}%</div>
         </div>
-        <div class="bar-value">${st.arrestRate}%</div>
-      </div>
-    `;
-  }).join('');
+      `;
+    }).join('');
+  }
 }
 
 // 12. 경찰서 상세 모달 팝업
 function openModal(stationName) {
-  const st = PROCESSED_POLICE_DATASET.find(s => s.stationName === stationName);
+  const dataset = getDataset();
+  const st = dataset.find(s => s.stationName === stationName);
   if (!st) return;
 
-  document.getElementById('modal-station-title').textContent = `${st.stationName} 상세 분석`;
-  document.getElementById('modal-station-sub').textContent = `${st.agencyRegion} 경찰청 관할 구역 치안 범죄 통계`;
+  const modalTitle = document.getElementById('modal-station-title');
+  const modalSub = document.getElementById('modal-station-sub');
+  const modalPop = document.getElementById('modal-pop');
+  const modalRate = document.getElementById('modal-rate');
+  const modalArrest = document.getElementById('modal-arrest');
+  const modalGrade = document.getElementById('modal-grade');
 
-  document.getElementById('modal-pop').textContent = `${st.population.toLocaleString()} 명`;
-  document.getElementById('modal-rate').textContent = `${st.ratePer100k} 건/10만명`;
-  document.getElementById('modal-arrest').textContent = `${st.arrestRate}% (${st.arrests.toLocaleString()}건 검거 / ${st.occurrences.toLocaleString()}건 발생)`;
-  document.getElementById('modal-grade').innerHTML = `<span class="badge ${st.riskGrade.badgeClass}">${st.riskGrade.label} (위험지수: ${st.riskIndex}점)</span>`;
+  const modalM = document.getElementById('modal-m');
+  const modalR = document.getElementById('modal-r');
+  const modalS = document.getElementById('modal-s');
+  const modalT = document.getElementById('modal-t');
+  const modalV = document.getElementById('modal-v');
 
-  document.getElementById('modal-m').textContent = `${st.breakdown.murder.toLocaleString()} 건`;
-  document.getElementById('modal-r').textContent = `${st.breakdown.robbery.toLocaleString()} 건`;
-  document.getElementById('modal-s').textContent = `${st.breakdown.sexualAssault.toLocaleString()} 건`;
-  document.getElementById('modal-t').textContent = `${st.breakdown.theft.toLocaleString()} 건`;
-  document.getElementById('modal-v').textContent = `${st.breakdown.violence.toLocaleString()} 건`;
+  if (modalTitle) modalTitle.textContent = `${st.stationName} 상세 분석`;
+  if (modalSub) modalSub.textContent = `${st.agencyRegion} 경찰청 관할 구역 치안 범죄 통계`;
 
-  document.getElementById('detail-modal').classList.add('active');
+  if (modalPop) modalPop.textContent = `${st.population.toLocaleString()} 명`;
+  if (modalRate) modalRate.textContent = `${st.ratePer100k} 건/10만명`;
+  if (modalArrest) modalArrest.textContent = `${st.arrestRate}% (${st.arrests.toLocaleString()}건 검거 / ${st.occurrences.toLocaleString()}건 발생)`;
+  if (modalGrade) modalGrade.innerHTML = `<span class="badge ${st.riskGrade.badgeClass}">${st.riskGrade.label} (위험지수: ${st.riskIndex}점)</span>`;
+
+  if (modalM) modalM.textContent = `${st.breakdown.murder.toLocaleString()} 건`;
+  if (modalR) modalR.textContent = `${st.breakdown.robbery.toLocaleString()} 건`;
+  if (modalS) modalS.textContent = `${st.breakdown.sexualAssault.toLocaleString()} 건`;
+  if (modalT) modalT.textContent = `${st.breakdown.theft.toLocaleString()} 건`;
+  if (modalV) modalV.textContent = `${st.breakdown.violence.toLocaleString()} 건`;
+
+  const modal = document.getElementById('detail-modal');
+  if (modal) modal.classList.add('active');
 }
 
 function closeModal() {
