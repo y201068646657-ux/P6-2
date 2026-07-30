@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>경찰청 공공데이터 - 전국 경찰서별 강력범죄 발생 현황 및 남한 지도 범죄률 분석기</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header>
+      <div>
+        <div class="brand-badge">
+          <span></span> 경찰청 형사국 공식 데이터 (2024년 기준)
+        </div>
+        <h1>전국 경찰서별 강력범죄 발생 현황 & 지도 분석기</h1>
+        <p>National Police Agency Crime Statistics (Data ID: 15084592)</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" onclick="scrollToElement('korea-map-section')">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A2 2 0 013 15.483V4.351a2 2 0 012.236-1.986L9 3m0 17l6-3m-6 3V3m6 17l5.447-2.724A2 2 0 0021 15.483V4.351a2 2 0 00-2.236-1.986L15 3m0 17V3"/></svg>
+          남한 지도 탐색기
+        </button>
+        <button class="btn btn-primary" onclick="scrollToElement('playground-section')">
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          공식 시뮬레이터
+        </button>
+      </div>
+    </header>
+
+    <!-- KPI Summary Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>전국 분석 대상 경찰서</span>
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-14 0H3m5 0h8"/></svg>
+        </div>
+        <div class="kpi-value" id="kpi-total-stations">0</div>
+        <div class="kpi-sub">총 관할 인구: <span class="kpi-highlight" id="kpi-total-pop">0</span> 명</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>전국 평균 10만명당 발생률</span>
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        </div>
+        <div class="kpi-value" id="kpi-avg-rate">0.0</div>
+        <div class="kpi-sub">총 강력범죄: <span class="kpi-highlight" id="kpi-total-occurrences">0</span> 건</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>전국 평균 검거율</span>
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        </div>
+        <div class="kpi-value" id="kpi-avg-arrest">0.0%</div>
+        <div class="kpi-sub">총 검거 건수: <span class="kpi-highlight" id="kpi-total-arrests">0</span> 건</div>
+      </div>
+
+      <div class="kpi-card">
+        <div class="kpi-title">
+          <span>최고 발생률 관할 경찰서</span>
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <div class="kpi-value" style="font-size: 1.4rem;" id="kpi-highest-station">-</div>
+        <div class="kpi-sub">발생률: <span class="kpi-highlight" id="kpi-highest-rate">0</span> 건/10만명</div>
+      </div>
+    </div>
+
+    <!-- Formula & Grading Card Section -->
+    <div class="panel-card formula-banner-card" style="margin-bottom: 36px; padding: 28px; border-left: 5px solid var(--accent-primary);">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 22px;">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: 10px; font-size: 1.25rem;">
+          <svg width="24" height="24" fill="none" stroke="var(--accent-primary)" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+          📐 범죄율 평가 등급 산출 공식 & 5단계 평가 기준
+        </h3>
+        <span class="brand-badge" style="margin:0;">경찰청 공식 수치 및 국제 표준 정규화 반영 (2024년 기준)</span>
+      </div>
+
+      <div class="formula-grid">
+        <!-- Formula Box 1: Crime Rate -->
+        <div class="formula-box">
+          <div class="formula-title">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            1. 인구 10만 명당 강력범죄 발생률 공식
+          </div>
+          <div class="formula-expr">
+            $$\text{발생률} = \left( \frac{\text{강력범죄 총 발생 건수}}{\text{관할 구역 주민등록 인구수}} \right) \times 100,000$$
+          </div>
+          <p class="formula-desc">인구 규모가 서로 다른 광역자치단체 및 관할 경찰서를 동일 조건에서 객관적으로 비교하는 국제 표준 범죄 밀도 공식입니다.</p>
+        </div>
+
+        <!-- Formula Box 2: Weighted Risk Index -->
+        <div class="formula-box">
+          <div class="formula-title">
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            2. 5대 강력범죄 가중 위험도 지수 (0~100점)
+          </div>
+          <div class="formula-expr">
+            $$\text{위험도} = \frac{\text{살인}\times 50 + \text{강도}\times 30 + \text{성범죄}\times 20 + \text{폭력}\times 10 + \text{절도}\times 5}{\text{관할 인구수}} \times 100,000$$
+          </div>
+          <p class="formula-desc">범죄 유형별 중증도 가중치(살인 50, 강도 30, 성범죄 20, 폭력 10, 절도 5)를 적용하여 심각도를 정밀 산출합니다.</p>
+        </div>
+      </div>
+
+      <!-- Grade Threshold Scale -->
+      <div style="margin-top: 26px;">
+        <div class="grade-scale-title">3. 전국 17개 광역시/도 상대적 5단계 안전/위험 등급 구분 기준</div>
+        <div class="grade-scale-grid">
+          <div class="grade-step-card">
+            <span class="badge badge-safe">1등급 (최우수 안전)</span>
+            <div class="step-range">상위 0% ~ 20%</div>
+            <div class="step-desc">발생률 및 위험도 최저 수준 최우수 안전 지역</div>
+          </div>
+          <div class="grade-step-card">
+            <span class="badge badge-low">2등급 (안전)</span>
+            <div class="step-range">상위 20% ~ 40%</div>
+            <div class="step-desc">발생률 및 위험 지수 양호 양호 지역</div>
+          </div>
+          <div class="grade-step-card">
+            <span class="badge badge-violet">3등급 (보통)</span>
+            <div class="step-range">상위 40% ~ 60%</div>
+            <div class="step-desc">전국 평균 수준 범죄 발생 지역</div>
+          </div>
+          <div class="grade-step-card">
+            <span class="badge badge-warning">4등급 (주의)</span>
+            <div class="step-range">상위 60% ~ 80%</div>
+            <div class="step-desc">인구 대비 범죄 밀도가 높아 주의 필요한 지역</div>
+          </div>
+          <div class="grade-step-card">
+            <span class="badge badge-danger">5등급 (고위험)</span>
+            <div class="step-range">상위 80% ~ 100%</div>
+            <div class="step-desc">발생률 최상위 20% 집중 관리 필요 지역</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Korea Map Visualizer Section -->
+    <div id="korea-map-section" class="panel-card" style="margin-bottom: 36px; padding: 28px;">
+      <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
+        <div>
+          <h3>
+            <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            대한민국 행정구역 지도 클릭 기반 범죄율 탐색기
+          </h3>
+          <p class="calc-res-label" style="margin-top:2px;">지도의 시/도 지역을 클릭하면 해당 지역의 정밀 범죄 통계가 출력됩니다.</p>
+        </div>
+
+        <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+          <!-- Metric Toggle Switch -->
+          <div class="tab-group" style="margin-bottom:0; border-bottom:none;">
+            <button id="metric-btn-rate" class="tab-btn active" onclick="switchMapMetric('rate')">10만명당 발생률 기준</button>
+            <button id="metric-btn-volume" class="tab-btn" onclick="switchMapMetric('volume')">총 발생건수 기준</button>
+          </div>
+
+          <div class="map-legend-group">
+            <span class="badge badge-safe">1등급 (최우수 안전)</span>
+            <span class="badge badge-low">2등급 (안전)</span>
+            <span class="badge badge-violet">3등급 (보통)</span>
+            <span class="badge badge-warning">4등급 (주의)</span>
+            <span class="badge badge-danger">5등급 (고위험)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="map-visualizer-container">
+        <!-- SVG Map Area -->
+        <div class="svg-map-wrapper">
+          <svg id="south-korea-svg" viewBox="0 0 500 550" preserveAspectRatio="xMidYMid meet">
+            <!-- Rendered by app.js -->
+          </svg>
+          <div id="map-tooltip" class="map-tooltip"></div>
+        </div>
+
+        <!-- Selected Region Detail Drawer -->
+        <div class="map-detail-drawer" id="map-detail-drawer">
+          <div class="drawer-header">
+            <div>
+              <span class="badge badge-low" id="drawer-region-id">SEOUL</span>
+              <h2 id="drawer-region-name" style="font-size:1.6rem; margin-top:4px;">서울특별시</h2>
+            </div>
+            <div id="drawer-risk-badge">
+              <span class="badge badge-violet">3등급 (보통)</span>
+            </div>
+          </div>
+
+          <div class="drawer-kpi-grid">
+            <div class="modal-info-box">
+              <div class="modal-info-label">10만명당 강력범죄 발생률</div>
+              <div class="modal-info-val" style="color:var(--accent-secondary);" id="drawer-rate-100k">0.0 건</div>
+            </div>
+            <div class="modal-info-box">
+              <div class="modal-info-label">강력범죄 종합 검거율</div>
+              <div class="modal-info-val" style="color:var(--accent-emerald);" id="drawer-arrest-rate">0.0%</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Playground Section -->
+    <div id="playground-section" class="playground-grid" style="grid-template-columns: 1fr; margin-bottom: 36px;">
+      <!-- Calculator Panel -->
+      <div class="panel-card">
+        <div class="panel-header">
+          <div>
+            <h3>
+              <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+              강력범죄 발생률 공식 시뮬레이터
+            </h3>
+            <p class="calc-res-label" style="font-size:0.78rem; margin-top:2px;">공식 경찰청 데이터 조회 전용입니다. 드롭다운 또는 지도에서 관할 경찰서를 선택하세요.</p>
+          </div>
+          <span class="badge badge-low" style="gap:4px;">
+            <svg width="12" height="12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            공식 데이터 전용 (수정 불가)
+          </span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">경찰서 선택 (프리셋 목록)</label>
+          <select id="station-preset-select" class="form-control" onchange="loadStationPreset(this.value)">
+            <!-- Populated by app.js -->
+          </select>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label class="form-label">관할 구역 인구수 (명)</label>
+            <input type="number" id="input-population" class="form-control readonly-input" value="486000" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">강력범죄 발생 건수 (건)</label>
+            <input type="number" id="input-occurrences" class="form-control readonly-input" value="4120" readonly>
+          </div>
+          <div class="form-group">
+            <label class="form-label">강력범죄 검거 건수 (건)</label>
+            <input type="number" id="input-arrests" class="form-control readonly-input" value="3480" readonly>
+          </div>
+        </div>
+
+        <label class="form-label">5대 강력범죄 세부 발생 건수 (위험도 지수 계산용)</label>
+        <div class="crime-inputs-grid" style="grid-template-columns: repeat(5, 1fr);">
+          <div>
+            <span class="form-label" style="font-size:0.75rem;">살인</span>
+            <input type="number" id="input-murder" class="form-control readonly-input" value="8" readonly>
+          </div>
+          <div>
+            <span class="form-label" style="font-size:0.75rem;">강도</span>
+            <input type="number" id="input-robbery" class="form-control readonly-input" value="14" readonly>
+          </div>
+          <div>
+            <span class="form-label" style="font-size:0.75rem;">강간·추행</span>
+            <input type="number" id="input-sex" class="form-control readonly-input" value="1572" readonly>
+          </div>
+          <div>
+            <span class="form-label" style="font-size:0.75rem;">절도</span>
+            <input type="number" id="input-theft" class="form-control readonly-input" value="1278" readonly>
+          </div>
+          <div>
+            <span class="form-label" style="font-size:0.75rem;">폭력</span>
+            <input type="number" id="input-violence" class="form-control readonly-input" value="2248" readonly>
+          </div>
+        </div>
+
+        <div class="calc-output-box" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;">
+          <div style="border-right: 1px dashed var(--border-glass); padding-right: 12px;">
+            <span class="calc-res-label">10만명당 발생률</span>
+            <div class="calc-res-val" id="res-rate-100k" style="margin-top: 4px;">0.0 건</div>
+          </div>
+          <div style="border-right: 1px dashed var(--border-glass); padding-right: 12px;">
+            <span class="calc-res-label">검거율 (%)</span>
+            <div class="calc-res-val" id="res-arrest-rate" style="margin-top: 4px;">0.0%</div>
+          </div>
+          <div style="border-right: 1px dashed var(--border-glass); padding-right: 12px;">
+            <span class="calc-res-label">가중 위험도 지수</span>
+            <div class="calc-res-val" id="res-risk-index" style="margin-top: 4px;">0 점</div>
+          </div>
+          <div>
+            <span class="calc-res-label">치안 안전 등급</span>
+            <div id="res-risk-grade-badge" style="margin-top: 4px;"><span class="badge badge-safe">1등급 (매우 안전)</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Grid -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="panel-header" style="margin-bottom:10px; border-bottom:none;">
+          <h3>발생률 TOP 10 경찰서 (10만명당 건수)</h3>
+        </div>
+        <div id="chart-high-rate" class="bar-chart-wrapper"></div>
+      </div>
+
+      <div class="chart-card">
+        <div class="panel-header" style="margin-bottom:10px; border-bottom:none;">
+          <h3>검거율 TOP 10 경찰서 (%)</h3>
+        </div>
+        <div id="chart-high-arrest" class="bar-chart-wrapper"></div>
+      </div>
+    </div>
+
+    <!-- Controls Toolbar -->
+    <div class="controls-bar">
+      <div class="controls-group">
+        <div class="search-box">
+          <svg class="search-icon" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+          <input type="text" id="search-input" class="form-control" placeholder="경찰서명 또는 지역 검색..." oninput="handleFilterChange()">
+        </div>
+
+        <select id="region-select" class="form-control" style="width: auto;" onchange="handleFilterChange()">
+          <option value="전체">시/도 경찰청 전체</option>
+          <option value="서울">서울특별시</option>
+          <option value="부산">부산광역시</option>
+          <option value="대구">대구광역시</option>
+          <option value="인천">인천광역시</option>
+          <option value="광주">광주광역시</option>
+          <option value="대전">대전광역시</option>
+          <option value="울산">울산광역시</option>
+          <option value="경기">경기도</option>
+          <option value="강원">강원특별자치도</option>
+          <option value="충북">충청북도</option>
+          <option value="충남">충청남도</option>
+          <option value="전북">전북특별자치도</option>
+          <option value="전남">전라남도</option>
+          <option value="경북">경상북도</option>
+          <option value="경남">경상남도</option>
+          <option value="제주">제주특별자치도</option>
+        </select>
+      </div>
+
+      <div class="controls-group">
+        <select id="sort-select" class="form-control" style="width: auto;" onchange="handleFilterChange()">
+          <option value="rateDesc">발생률 높은순 (10만명당)</option>
+          <option value="rateAsc">발생률 낮은순 (10만명당)</option>
+          <option value="occurDesc">발생건수 많은순</option>
+          <option value="arrestDesc">검거율 높은순</option>
+          <option value="riskDesc">위험도지수 높은순</option>
+          <option value="nameAsc">경찰서 이름순</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="table-card">
+      <div class="panel-header" style="border-bottom:none;">
+        <h3>전국 경찰서 강력범죄 발생 및 검거 현황</h3>
+        <span class="calc-res-label" id="table-count-info">총 0개 경찰서 표시 중</span>
+      </div>
+
+      <div class="table-responsive">
+        <table>
+          <thead>
+            <tr>
+              <th>시/도</th>
+              <th>경찰서명</th>
+              <th>관할 인구수</th>
+              <th>강력범죄 발생건수</th>
+              <th>10만명당 발생률</th>
+              <th>검거건수</th>
+              <th>검거율 (%)</th>
+              <th>위험도 지수</th>
+              <th>안전 등급</th>
+            </tr>
+          </thead>
+          <tbody id="police-table-body">
+            <!-- Rendered by app.js -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+      <p>© 2026 경찰청 공공데이터 기반 대한민국 지도 클릭 범죄율 분석 시스템</p>
+      <p style="margin-top:4px; opacity:0.8; color: var(--accent-secondary);">
+        공공데이터 출처: <a href="https://www.data.go.kr/data/15084592/fileData.do?recommendDataYn=Y" target="_blank" style="color: var(--accent-secondary); text-decoration: underline;">경찰청_전국 경찰서별 강력범죄 발생 현황_20241231 (경찰청 형사국 강력범죄수사과)</a>
+      </p>
+    </footer>
+  </div>
+
+  <!-- Detail Modal -->
+  <div id="detail-modal" class="modal-overlay" onclick="closeModalOnOverlay(event)">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">×</button>
+      <h2 id="modal-station-title">경찰서 상세 정보</h2>
+      <p id="modal-station-sub" class="calc-res-label" style="margin-top:4px;">관할 구역 치안 통계 (2024년 기준)</p>
+
+      <div class="modal-body-grid">
+        <div class="modal-info-box">
+          <div class="modal-info-label">관할 인구수</div>
+          <div class="modal-info-val" id="modal-pop">0 명</div>
+        </div>
+        <div class="modal-info-box">
+          <div class="modal-info-label">10만명당 발생률</div>
+          <div class="modal-info-val" id="modal-rate">0.0 건</div>
+        </div>
+        <div class="modal-info-box">
+          <div class="modal-info-label">검거율</div>
+          <div class="modal-info-val" id="modal-arrest">0.0%</div>
+        </div>
+        <div class="modal-info-box">
+          <div class="modal-info-label">위험도 등급</div>
+          <div class="modal-info-val" id="modal-grade">-</div>
+        </div>
+      </div>
+
+      <div style="margin-top:20px;">
+        <h4 style="font-size:0.95rem; margin-bottom:10px;">5대 강력범죄 세부 발생 내역</h4>
+        <div class="calc-output-box" style="padding:14px;">
+          <div class="calc-res-row">
+            <span class="calc-res-label">살인</span>
+            <span class="calc-res-val" id="modal-m">0 건</span>
+          </div>
+          <div class="calc-res-row">
+            <span class="calc-res-label">강도</span>
+            <span class="calc-res-val" id="modal-r">0 건</span>
+          </div>
+          <div class="calc-res-row">
+            <span class="calc-res-label">강간·강제추행</span>
+            <span class="calc-res-val" id="modal-s">0 건</span>
+          </div>
+          <div class="calc-res-row">
+            <span class="calc-res-label">절도</span>
+            <span class="calc-res-val" id="modal-t">0 건</span>
+          </div>
+          <div class="calc-res-row">
+            <span class="calc-res-label">폭력</span>
+            <span class="calc-res-val" id="modal-v">0 건</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast">클립보드에 코드가 복사되었습니다!</div>
+
+  <!-- Scripts -->
+  <script src="policeCrimeUtils.js"></script>
+  <script src="policeCrimeData.js"></script>
+  <script src="koreaMapData.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
