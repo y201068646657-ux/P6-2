@@ -196,62 +196,76 @@ function selectRegionOnMap(key) {
   const activeGroup = document.getElementById(`map-group-${key}`);
   if (activeGroup) activeGroup.classList.add('active');
 
-  document.getElementById('drawer-region-id').textContent = stats.id || key;
-  document.getElementById('drawer-region-name').textContent = stats.name;
+  const elemId = document.getElementById('drawer-region-id');
+  const elemName = document.getElementById('drawer-region-name');
+  const elemBadge = document.getElementById('drawer-risk-badge');
+  const elemRate = document.getElementById('drawer-rate-100k');
+  const elemArrest = document.getElementById('drawer-arrest-rate');
+  const elemPopOccur = document.getElementById('drawer-pop-occurrences');
 
-  document.getElementById('drawer-risk-badge').innerHTML = `
-    <span class="badge ${stats.riskGrade.badgeClass}">${stats.riskGrade.label}</span>
-  `;
+  if (elemId) elemId.textContent = stats.id || key;
+  if (elemName) elemName.textContent = stats.name;
 
-  document.getElementById('drawer-rate-100k').textContent = `${stats.ratePer100k} 건/10만명`;
-  document.getElementById('drawer-arrest-rate').textContent = `${stats.arrestRate}%`;
+  if (elemBadge) {
+    elemBadge.innerHTML = `<span class="badge ${stats.riskGrade.badgeClass}">${stats.riskGrade.label}</span>`;
+  }
 
-  document.getElementById('drawer-pop-occurrences').textContent = 
-    `집계 대상 ${stats.stations.length}개 경찰서 관할 인구 ${stats.totalPopulation.toLocaleString()}명 | 총 강력범죄 ${stats.totalOccurrences.toLocaleString()}건 발생 (${stats.totalArrests.toLocaleString()}건 검거)`;
+  if (elemRate) elemRate.textContent = `${stats.ratePer100k} 건/10만명`;
+  if (elemArrest) elemArrest.textContent = `${stats.arrestRate}%`;
+
+  if (elemPopOccur) {
+    elemPopOccur.textContent = `관할 인구 ${stats.totalPopulation.toLocaleString()}명 | 총 강력범죄 ${stats.totalOccurrences.toLocaleString()}건 발생 (${stats.totalArrests.toLocaleString()}건 검거)`;
+  }
 
   const total5 = Object.values(stats.breakdown).reduce((a, b) => a + b, 0) || 1;
   const breakdownLabels = { murder: '살인', robbery: '강도', sexualAssault: '강간·추행', theft: '절도', violence: '폭력' };
 
   const barsContainer = document.getElementById('drawer-crime-bars');
-  barsContainer.innerHTML = Object.keys(stats.breakdown).map(type => {
-    const count = stats.breakdown[type];
-    const pct = Math.min(100, Math.round((count / total5) * 100));
-    return `
-      <div class="drawer-crime-row">
-        <span style="color:var(--text-muted);">${breakdownLabels[type]}</span>
-        <div class="bar-track">
-          <div class="bar-fill" style="width:${pct}%;"></div>
-        </div>
-        <span style="font-family:var(--font-mono); text-align:right;">${count}건 (${pct}%)</span>
-      </div>
-    `;
-  }).join('');
-
-  const listContainer = document.getElementById('drawer-stations-list');
-  if (!stats.stations.length) {
-    listContainer.innerHTML = `<div style="font-size:0.82rem; color:var(--text-muted);">해당 지역 소속 경찰서 상세 데이터 준비 중</div>`;
-  } else {
-    listContainer.innerHTML = stats.stations.map((st, idx) => {
-      const stIdx = PROCESSED_POLICE_DATASET.findIndex(s => s.stationName === st.stationName);
+  if (barsContainer) {
+    barsContainer.innerHTML = Object.keys(stats.breakdown).map(type => {
+      const count = stats.breakdown[type];
+      const pct = Math.min(100, Math.round((count / total5) * 100));
       return `
-        <div class="station-rank-card" onclick="selectStationByPresetIndex(${stIdx})" style="cursor:pointer;" title="시뮬레이터로 데이터 로드">
-          <div>
-            <b style="color:#fff;">${idx + 1}. ${st.stationName}</b>
-            <span class="calc-res-label" style="font-size:0.75rem; margin-left:6px;">인구 ${st.population.toLocaleString()}명</span>
+        <div class="drawer-crime-row">
+          <span style="color:var(--text-muted);">${breakdownLabels[type]}</span>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${pct}%;"></div>
           </div>
-          <div>
-            <span style="color:var(--accent-secondary); font-family:var(--font-mono); font-weight:700;">${st.ratePer100k}</span>
-            <span class="calc-res-label" style="font-size:0.75rem;">건/10만명</span>
-          </div>
+          <span style="font-family:var(--font-mono); text-align:right;">${count.toLocaleString()}건 (${pct}%)</span>
         </div>
       `;
     }).join('');
+  }
 
-    if (stats.stations[0]) {
-      const topIdx = PROCESSED_POLICE_DATASET.findIndex(s => s.stationName === stats.stations[0].stationName);
-      if (topIdx !== -1) {
-        document.getElementById('station-preset-select').value = topIdx;
-        loadStationPreset(topIdx);
+  const listContainer = document.getElementById('drawer-stations-list');
+  if (listContainer) {
+    const dataset = getDataset();
+    if (!stats.stations || !stats.stations.length) {
+      listContainer.innerHTML = `<div style="font-size:0.82rem; color:var(--text-muted);">해당 지역 소속 경찰서 상세 데이터 준비 중</div>`;
+    } else {
+      listContainer.innerHTML = stats.stations.map((st, idx) => {
+        const stIdx = dataset.findIndex(s => s.stationName === st.stationName);
+        return `
+          <div class="station-rank-card" onclick="selectStationByPresetIndex(${stIdx})" style="cursor:pointer;" title="시뮬레이터로 데이터 로드">
+            <div>
+              <b style="color:#fff;">${idx + 1}. ${st.stationName}</b>
+              <span class="calc-res-label" style="font-size:0.75rem; margin-left:6px;">인구 ${st.population.toLocaleString()}명</span>
+            </div>
+            <div>
+              <span style="color:var(--accent-secondary); font-family:var(--font-mono); font-weight:700;">${st.ratePer100k}</span>
+              <span class="calc-res-label" style="font-size:0.75rem;">건/10만명</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      if (stats.stations[0]) {
+        const topIdx = dataset.findIndex(s => s.stationName === stats.stations[0].stationName);
+        if (topIdx !== -1) {
+          const select = document.getElementById('station-preset-select');
+          if (select) select.value = topIdx;
+          loadStationPreset(topIdx);
+        }
       }
     }
   }
