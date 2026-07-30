@@ -8,16 +8,34 @@ let aggregatedRegionStats = {};
 let selectedRegionKey = '서울';
 let currentMetric = 'rate';
 
-// 페이지 로드 시 초기화
-document.addEventListener('DOMContentLoaded', () => {
-  aggregatedRegionStats = getAggregatedRegionStats('rate');
-  initSummaryKPI();
-  renderSouthKoreaSvgMap();
-  selectRegionOnMap('서울');
-  populatePresets();
-  loadStationPreset(0);
-  switchCodeTab('tab-rate');
-  handleFilterChange();
+// 페이지 로드 및 깃허브 페이지(GitHub Pages) 등 정적 서버 대응 초기화
+function initApp() {
+  try {
+    aggregatedRegionStats = getAggregatedRegionStats('rate');
+    initSummaryKPI();
+    renderSouthKoreaSvgMap();
+    selectRegionOnMap('서울');
+    populatePresets();
+    loadStationPreset(0);
+    switchCodeTab('tab-rate');
+    handleFilterChange();
+  } catch (e) {
+    console.error('App initialization error:', e);
+  }
+}
+
+// DOM 상태에 따라 즉시 실행 또는 이벤트 대기 (GitHub Pages 호환)
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  initApp();
+} else {
+  document.addEventListener('DOMContentLoaded', initApp);
+}
+
+// 윈도우 렌더링 완료 시 지도 보장 재렌더링
+window.addEventListener('load', () => {
+  if (typeof KOREA_REGION_MAP_DATA !== 'undefined') {
+    renderSouthKoreaSvgMap();
+  }
 });
 
 // 지도 평가 지표 스위치 (10만명당 발생률 vs 총 범죄 발생건수)
