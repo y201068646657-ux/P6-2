@@ -196,12 +196,13 @@ function selectRegionOnMap(key) {
   const activeGroup = document.getElementById(`map-group-${key}`);
   if (activeGroup) activeGroup.classList.add('active');
 
+  const drawer = document.getElementById('map-detail-drawer');
+
   const elemId = document.getElementById('drawer-region-id');
   const elemName = document.getElementById('drawer-region-name');
   const elemBadge = document.getElementById('drawer-risk-badge');
   const elemRate = document.getElementById('drawer-rate-100k');
   const elemArrest = document.getElementById('drawer-arrest-rate');
-  const elemPopOccur = document.getElementById('drawer-pop-occurrences');
 
   if (elemId) elemId.textContent = stats.id || key;
   if (elemName) elemName.textContent = stats.name;
@@ -213,31 +214,67 @@ function selectRegionOnMap(key) {
   if (elemRate) elemRate.textContent = `${stats.ratePer100k} 건/10만명`;
   if (elemArrest) elemArrest.textContent = `${stats.arrestRate}%`;
 
+  // 1. 관할 인구 및 발생 건수 영역 자동 복구/업데이트
+  let elemPopOccur = document.getElementById('drawer-pop-occurrences');
+  if (!elemPopOccur && drawer) {
+    const popBox = document.createElement('div');
+    popBox.style.marginTop = '16px';
+    popBox.innerHTML = `
+      <div class="modal-info-label">관할 총 인구수 및 발생 건수</div>
+      <div style="font-size:0.95rem; font-weight:600; color:#fff; margin-top:2px;" id="drawer-pop-occurrences"></div>
+    `;
+    drawer.appendChild(popBox);
+    elemPopOccur = document.getElementById('drawer-pop-occurrences');
+  }
   if (elemPopOccur) {
     elemPopOccur.textContent = `관할 인구 ${stats.totalPopulation.toLocaleString()}명 | 총 강력범죄 ${stats.totalOccurrences.toLocaleString()}건 발생 (${stats.totalArrests.toLocaleString()}건 검거)`;
+  }
+
+  // 2. 5대 강력범죄 세부 비중 영역 자동 복구/업데이트
+  let barsContainer = document.getElementById('drawer-crime-bars');
+  if (!barsContainer && drawer) {
+    const barsSection = document.createElement('div');
+    barsSection.style.marginTop = '20px';
+    barsSection.innerHTML = `
+      <h4 style="font-size:0.9rem; margin-bottom:10px; color:var(--text-muted);">5대 강력범죄 세부 비중 및 발생 건수</h4>
+      <div id="drawer-crime-bars" class="drawer-crime-bars"></div>
+    `;
+    drawer.appendChild(barsSection);
+    barsContainer = document.getElementById('drawer-crime-bars');
   }
 
   const total5 = Object.values(stats.breakdown).reduce((a, b) => a + b, 0) || 1;
   const breakdownLabels = { murder: '살인', robbery: '강도', sexualAssault: '강간·추행', theft: '절도', violence: '폭력' };
 
-  const barsContainer = document.getElementById('drawer-crime-bars');
   if (barsContainer) {
     barsContainer.innerHTML = Object.keys(stats.breakdown).map(type => {
       const count = stats.breakdown[type];
       const pct = Math.min(100, Math.round((count / total5) * 100));
       return `
         <div class="drawer-crime-row">
-          <span style="color:var(--text-muted);">${breakdownLabels[type]}</span>
+          <span style="color:var(--text-muted); font-weight:600;">${breakdownLabels[type] || type}</span>
           <div class="bar-track">
             <div class="bar-fill" style="width:${pct}%;"></div>
           </div>
-          <span style="font-family:var(--font-mono); text-align:right;">${count.toLocaleString()}건 (${pct}%)</span>
+          <span style="font-family:var(--font-mono); text-align:right; font-weight:700;">${count.toLocaleString()}건 (${pct}%)</span>
         </div>
       `;
     }).join('');
   }
 
-  const listContainer = document.getElementById('drawer-stations-list');
+  // 3. 소속 경찰서별 랭킹 영역 자동 복구/업데이트
+  let listContainer = document.getElementById('drawer-stations-list');
+  if (!listContainer && drawer) {
+    const listSection = document.createElement('div');
+    listSection.style.marginTop = '20px';
+    listSection.innerHTML = `
+      <h4 style="font-size:0.9rem; margin-bottom:10px; color:var(--text-muted);">소속 경찰서별 발생률 랭킹</h4>
+      <div id="drawer-stations-list" class="drawer-stations-list"></div>
+    `;
+    drawer.appendChild(listSection);
+    listContainer = document.getElementById('drawer-stations-list');
+  }
+
   if (listContainer) {
     const dataset = getDataset();
     if (!stats.stations || !stats.stations.length) {
